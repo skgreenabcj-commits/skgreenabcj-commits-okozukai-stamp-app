@@ -177,22 +177,44 @@
                     
                     <!-- 手動バックアップ -->
                     <div class="backup-buttons">
-                        <button class="btn-backup" onclick="exportData()">
-                            📤 データをバックアップ
+                        <h3>📤 データをバックアップ</h3>
+                        
+                        <!-- ファイルダウンロード -->
+                        <button class="btn-backup" onclick="exportDataFixed()">
+                            💾 ファイルでバックアップ
                         </button>
-                        <p class="backup-note">ファイルをダウンロードします。iCloud DriveやGoogleドライブにほぞんしてね</p>
+                        <p class="backup-note">ファイル名: okozukai-backup.json<br>iCloud DriveやGoogleドライブにほぞんしてね</p>
+                        
+                        <!-- クリップボードコピー -->
+                        <button class="btn-backup-copy" onclick="copyToClipboard()">
+                            📋 データをコピー
+                        </button>
+                        <p class="backup-note">Googleドライブにテキストでほぞんできるよ</p>
+                        
+                        <!-- QRコード生成 -->
+                        <button class="btn-backup-qr" onclick="showQRCode()">
+                            📱 QRコードでバックアップ
+                        </button>
+                        <p class="backup-note">べつのスマホでよみとれるよ</p>
                     </div>
                     
                     <!-- データ復元 -->
                     <div class="restore-section">
-                        <h3>データのふくげん</h3>
+                        <h3>📥 データのふくげん</h3>
                         
                         <div class="restore-buttons">
+                            <!-- ファイルから復元 -->
                             <button class="btn-restore" onclick="document.getElementById('importFile').click()">
-                                📥 ファイルからふくげん
+                                💾 ファイルからふくげん
                             </button>
                             <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
                             
+                            <!-- クリップボードから復元 -->
+                            <button class="btn-restore-paste" onclick="pasteFromClipboard()">
+                                📋 コピーしたデータからふくげん
+                            </button>
+                            
+                            <!-- 自動バックアップから復元 -->
                             <button class="btn-restore-auto" onclick="restoreFromAutoBackup()" id="autoRestoreBtn" style="display:none">
                                 🔄 じどうバックアップからふくげん
                             </button>
@@ -226,6 +248,21 @@
             </div>
             <div class="modal-buttons">
                 <button class="btn-cancel" onclick="closeModal()">もどる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル: QRコード表示 -->
+    <div class="modal" id="qrModal">
+        <div class="modal-content qr-modal">
+            <h3>📱 QRコードでバックアップ</h3>
+            <p class="qr-instruction">このQRコードをべつのスマホでよみとってね</p>
+            <div class="qr-code-container">
+                <canvas id="qrCanvas"></canvas>
+            </div>
+            <p class="qr-note">⚠️ データがおおいとQRコードがよみとりにくくなるよ<br>そのときはファイルかコピーをつかってね</p>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="closeQRModal()">とじる</button>
             </div>
         </div>
     </div>
@@ -269,6 +306,8 @@
 
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- QRCode.js for QR code generation -->
+    <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
     <!-- アプリケーションスクリプト -->
     <script src="js/app.js"></script>
 </body>
