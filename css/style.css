@@ -122,6 +122,7 @@ body {
     border-radius: 12px;
     margin-bottom: 20px;
     border: 3px dashed #ffc107;
+    overflow: hidden; /* はみ出し防止 */
 }
 
 .stamp-palette h3 {
@@ -133,20 +134,23 @@ body {
 
 .stamp-options {
     display: flex;
-    justify-content: space-around;
-    gap: 8px;
+    justify-content: space-between; /* space-aroundからspace-betweenに変更 */
+    gap: 4px; /* 8pxから4pxに縮小 */
+    flex-wrap: nowrap; /* 折り返さない */
 }
 
 .stamp-btn {
-    font-size: 36px;
-    padding: 8px;
+    font-size: 32px; /* 36pxから32pxに縮小 */
+    padding: 6px; /* 8pxから6pxに縮小 */
     border: 3px solid #ffc107;
     background: white;
     border-radius: 12px;
     cursor: pointer;
     transition: all 0.2s;
-    width: 60px;
-    height: 60px;
+    width: 50px; /* 60pxから50pxに縮小 */
+    height: 50px; /* 60pxから50pxに縮小 */
+    min-width: 50px; /* 最小幅を設定 */
+    flex-shrink: 1; /* 必要に応じて縮小可能 */
     display: flex;
     align-items: center;
     justify-content: center;
@@ -482,10 +486,21 @@ body {
         padding: 12px;
     }
     
+    .stamp-palette {
+        padding: 12px; /* パディングを縮小 */
+    }
+    
+    .stamp-options {
+        gap: 2px; /* さらに縮小 */
+    }
+    
     .stamp-btn {
-        font-size: 30px;
-        width: 50px;
-        height: 50px;
+        font-size: 28px; /* 30pxから28pxに縮小 */
+        width: 45px; /* 50pxから45pxに縮小 */
+        height: 45px; /* 50pxから45pxに縮小 */
+        min-width: 45px;
+        padding: 4px; /* パディングを縮小 */
+        border-width: 2px; /* ボーダーを細く */
     }
     
     .stamp-table {
@@ -507,6 +522,53 @@ body {
     
     .total-paid-value {
         font-size: 44px;
+    }
+}
+
+/* 超小型スマホ向け（iPhone SE、iPhone 12 miniなど） */
+@media (max-width: 375px) {
+    .stamp-palette {
+        padding: 10px;
+    }
+    
+    .stamp-palette h3 {
+        font-size: 14px;
+        margin-bottom: 8px;
+    }
+    
+    .stamp-options {
+        gap: 2px;
+    }
+    
+    .stamp-btn {
+        font-size: 24px; /* さらに縮小 */
+        width: 42px;
+        height: 42px;
+        min-width: 42px;
+        padding: 3px;
+        border-width: 2px;
+        border-radius: 8px;
+    }
+}
+
+/* 極小スマホ向け（iPhone SE 第1世代など） */
+@media (max-width: 320px) {
+    .stamp-palette {
+        padding: 8px;
+    }
+    
+    .stamp-options {
+        gap: 1px;
+    }
+    
+    .stamp-btn {
+        font-size: 22px;
+        width: 38px;
+        height: 38px;
+        min-width: 38px;
+        padding: 2px;
+        border-width: 2px;
+        border-radius: 6px;
     }
 }
 
@@ -1040,3 +1102,120 @@ body {
     transform: scale(0.95);
 }
 
+/* 新しいバックアップボタンのスタイル */
+.btn-backup-copy {
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 900;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(156, 39, 176, 0.4);
+    margin-bottom: 8px;
+    margin-top: 16px;
+}
+
+.btn-backup-copy:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 6px rgba(156, 39, 176, 0.4);
+}
+
+.btn-backup-qr {
+    width: 100%;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: 900;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ff9800 0%, #f57c00 100%);
+    color: white;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+    margin-bottom: 8px;
+    margin-top: 16px;
+}
+
+.btn-backup-qr:active {
+    transform: scale(0.98);
+    box-shadow: 0 2px 6px rgba(255, 152, 0, 0.4);
+}
+
+.btn-restore-paste {
+    width: 100%;
+    padding: 14px;
+    font-size: 16px;
+    font-weight: 900;
+    border: 3px solid #9c27b0;
+    border-radius: 10px;
+    background: white;
+    color: #7b1fa2;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.btn-restore-paste:active {
+    transform: scale(0.98);
+    background: #f3e5f5;
+}
+
+/* QRコードモーダル */
+.qr-modal {
+    max-width: 400px;
+}
+
+.qr-instruction {
+    font-size: 14px;
+    font-weight: 700;
+    color: #495057;
+    text-align: center;
+    margin-bottom: 16px;
+    background: #fff3e0;
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.qr-code-container {
+    background: white;
+    padding: 20px;
+    border-radius: 12px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+#qrCanvas {
+    max-width: 100%;
+    height: auto;
+}
+
+.qr-note {
+    font-size: 12px;
+    font-weight: 700;
+    color: #ff9800;
+    text-align: center;
+    background: #fff3e0;
+    padding: 10px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    line-height: 1.6;
+}
+
+/* バックアップボタンセクション */
+.backup-buttons h3 {
+    font-size: 16px;
+    font-weight: 900;
+    color: #1976d2;
+    margin-bottom: 12px;
+    margin-top: 20px;
+}
+
+.backup-buttons h3:first-child {
+    margin-top: 0;
+}
