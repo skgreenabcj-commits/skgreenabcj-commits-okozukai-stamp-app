@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <title>おこづかいスタンプ</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700;900&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- ヘッダー -->
+        <header class="header">
+            <h1 class="app-title">おこづかいスタンプ</h1>
+            <div class="user-name" id="userName">なまえ：おなまえ</div>
+        </header>
+
+        <!-- ナビゲーション -->
+        <nav class="nav-tabs">
+            <button class="nav-tab active" onclick="showPage('stamp')">きょうのスタンプ</button>
+            <button class="nav-tab" onclick="showPage('history')">るいせき</button>
+            <button class="nav-tab" onclick="showPage('settings')">せってい</button>
+        </nav>
+
+        <!-- ページ1: 今週のスタンプ -->
+        <div id="stampPage" class="page active">
+            <!-- 週の情報 -->
+            <div class="week-info">
+                <h2 id="weekLabel">なんしゅう：●がつ●にちのしゅう</h2>
+            </div>
+
+            <!-- スタンプ選択パレット -->
+            <div class="stamp-palette" id="stampPalette">
+                <h3>スタンプをえらんでね</h3>
+                <div class="stamp-options">
+                    <button class="stamp-btn" data-stamp="⭐">⭐</button>
+                    <button class="stamp-btn" data-stamp="🌟">🌟</button>
+                    <button class="stamp-btn" data-stamp="✨">✨</button>
+                    <button class="stamp-btn" data-stamp="🎉">🎉</button>
+                    <button class="stamp-btn" data-stamp="🏆">🏆</button>
+                    <button class="stamp-btn" data-stamp="💮">💮</button>
+                </div>
+            </div>
+
+            <!-- スタンプ表 -->
+            <div class="stamp-table-container">
+                <table class="stamp-table" id="stampTable">
+                    <thead>
+                        <tr>
+                            <th>ようび</th>
+                            <th>おべんきょう</th>
+                            <th>おてつだい</th>
+                            <th>よいこ</th>
+                            <th>ごうけい</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stampTableBody">
+                        <!-- JavaScriptで生成 -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- 週の集計 -->
+            <div class="weekly-summary">
+                <!-- 達成バッジセクション -->
+                <div id="achievementBadges" class="achievement-section">
+                    <!-- JavaScriptで生成 -->
+                </div>
+                
+                <div class="summary-item">
+                    <div class="summary-label">しゅうのスタンプ</div>
+                    <div class="summary-value large" id="weeklyStamps">0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">こんしゅうのおこづかい</div>
+                    <div class="summary-value money" id="weeklyAllowance">0えん</div>
+                </div>
+                <div class="summary-item bonus" id="bonusSection" style="display:none;">
+                    <div class="summary-label">たっせいボーナス</div>
+                    <div class="summary-value bonus" id="bonusAmount">0えん</div>
+                </div>
+                <div class="summary-item carryover" id="carryoverSection">
+                    <div class="summary-label">よくしゅうにもちこし</div>
+                    <div class="summary-value" id="carryoverAmount">0えん</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ページ2: 累積 -->
+        <div id="historyPage" class="page">
+            <!-- 累積給付額 -->
+            <div class="total-paid-section">
+                <h2>これまでのおこづかい</h2>
+                <div class="total-paid-value" id="totalPaid">0えん</div>
+            </div>
+
+            <!-- 週ごとのグラフ -->
+            <div class="chart-section">
+                <h3>しゅうごとのおこづかい</h3>
+                <div class="chart-container">
+                    <canvas id="weeklyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- 履歴リスト -->
+            <div class="history-list" id="historyList">
+                <!-- JavaScriptで生成 -->
+            </div>
+        </div>
+
+        <!-- ページ3: 設定 -->
+        <div id="settingsPage" class="page">
+            <div class="settings-container">
+                <!-- 基本設定 -->
+                <div class="settings-section">
+                    <h2>きほんせってい</h2>
+                    
+                    <div class="setting-item">
+                        <label for="childName">なまえ</label>
+                        <input type="text" id="childName" placeholder="おなまえをいれてね">
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="stampPrice">スタンプ1このねだん</label>
+                        <input type="number" id="stampPrice" min="1" value="10">
+                        <span class="unit">えん</span>
+                    </div>
+                    
+                    <button class="btn-save" onclick="saveBasicSettings()">ほぞんする</button>
+                </div>
+
+                <!-- バッジ設定 -->
+                <div class="settings-section">
+                    <h2>たっせいバッジせってい</h2>
+                    <p class="hint">くぶんごとに、しゅうで●このスタンプをあつめると🏆バッジがもらえるよ</p>
+                    
+                    <div class="setting-item">
+                        <label for="badgeThreshold">バッジをもらえるスタンプのかず</label>
+                        <input type="number" id="badgeThreshold" min="1" value="10">
+                        <span class="unit">こ</span>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label for="badgeBonus">バッジ1このごほうび</label>
+                        <input type="number" id="badgeBonus" min="0" step="10" value="50">
+                        <span class="unit">えん</span>
+                    </div>
+                    
+                    <button class="btn-save" onclick="saveBasicSettings()">ほぞんする</button>
+                </div>
+
+                <!-- スタンプ設定 -->
+                <div class="settings-section">
+                    <h2>スタンプせってい</h2>
+                    <p class="hint">つかいたいスタンプを6こえらんでね</p>
+                    
+                    <div id="stampSettingsList" class="stamp-settings-list">
+                        <!-- JavaScriptで生成 -->
+                    </div>
+                </div>
+
+                <!-- バックアップと復元 -->
+                <div class="settings-section backup-section">
+                    <h2>データのバックアップ</h2>
+                    <p class="hint">⚠️ じゅうよう：スマホがかわるときやデータがきえたときのために、バックアップをとっておきましょう</p>
+                    
+                    <!-- 自動バックアップ情報 -->
+                    <div class="backup-info">
+                        <div class="backup-info-title">📅 じどうバックアップ</div>
+                        <div class="backup-info-detail">
+                            まいにち1かい、じどうでバックアップします<br>
+                            さいごのバックアップ：<span id="lastBackupDate">まだありません</span>
+                        </div>
+                    </div>
+                    
+                    <!-- 手動バックアップ -->
+                    <div class="backup-buttons">
+                        <button class="btn-backup" onclick="exportData()">
+                            📤 データをバックアップ
+                        </button>
+                        <p class="backup-note">ファイルをダウンロードします。iCloud DriveやGoogleドライブにほぞんしてね</p>
+                    </div>
+                    
+                    <!-- データ復元 -->
+                    <div class="restore-section">
+                        <h3>データのふくげん</h3>
+                        
+                        <div class="restore-buttons">
+                            <button class="btn-restore" onclick="document.getElementById('importFile').click()">
+                                📥 ファイルからふくげん
+                            </button>
+                            <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+                            
+                            <button class="btn-restore-auto" onclick="restoreFromAutoBackup()" id="autoRestoreBtn" style="display:none">
+                                🔄 じどうバックアップからふくげん
+                            </button>
+                        </div>
+                        <p class="restore-note">⚠️ ふくげんすると、いまのデータはきえます</p>
+                    </div>
+                </div>
+
+                <!-- データリセット -->
+                <div class="settings-section danger-zone">
+                    <h2>データのリセット</h2>
+                    <p class="warning">⚠️ ちゅうい：すべてのデータがきえます</p>
+                    <button class="btn-danger" onclick="confirmResetData()">すべてリセット</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル: スタンプ追加 -->
+    <div class="modal" id="stampModal">
+        <div class="modal-content">
+            <h3 id="modalTitle">スタンプをおそう</h3>
+            <div class="modal-info" id="modalInfo"></div>
+            <div class="stamp-selection" id="stampSelection">
+                <button class="stamp-select-btn" data-stamp="⭐">⭐</button>
+                <button class="stamp-select-btn" data-stamp="🌟">🌟</button>
+                <button class="stamp-select-btn" data-stamp="✨">✨</button>
+                <button class="stamp-select-btn" data-stamp="🎉">🎉</button>
+                <button class="stamp-select-btn" data-stamp="🏆">🏆</button>
+                <button class="stamp-select-btn" data-stamp="💮">💮</button>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-cancel" onclick="closeModal()">もどる</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- モーダル: バックアップ案内 -->
+    <div class="modal" id="backupGuideModal">
+        <div class="modal-content backup-guide">
+            <h3>📱 データのバックアップについて</h3>
+            <div class="backup-guide-content">
+                <div class="backup-guide-section">
+                    <div class="backup-guide-icon">💾</div>
+                    <div class="backup-guide-text">
+                        <strong>バックアップファイルをほぞんしました！</strong><br>
+                        このファイルがあれば、スマホがかわってもデータをもとにもどせます
+                    </div>
+                </div>
+                
+                <div class="backup-guide-section">
+                    <div class="backup-guide-icon">☁️</div>
+                    <div class="backup-guide-text">
+                        <strong>ファイルのほぞんばしょ</strong><br>
+                        ・iCloud Drive（すいしょう）<br>
+                        ・Googleドライブ<br>
+                        ・そのほかのクラウドサービス
+                    </div>
+                </div>
+                
+                <div class="backup-guide-section">
+                    <div class="backup-guide-icon">🔄</div>
+                    <div class="backup-guide-text">
+                        <strong>じどうバックアップもあります</strong><br>
+                        まいにち1かい、このスマホのなかにじどうでバックアップされます
+                    </div>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="btn-primary" onclick="closeBackupGuide()">わかった！</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- アプリケーションスクリプト -->
+    <script src="js/app.js"></script>
+</body>
+</html>
