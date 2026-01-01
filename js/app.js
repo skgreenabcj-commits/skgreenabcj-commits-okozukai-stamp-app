@@ -907,11 +907,11 @@ async function resetAllData() {
     }
 }
 
-// バックアップのエクスポート
-async function exportData() {
+// バックアップのエクスポート（固定ファイル名）
+async function exportDataFixed() {
     try {
         const backupData = {
-            version: '3.3.0-localStorage',
+            version: '4.1.0-localStorage',
             exported_at: new Date().toISOString(),
             settings: JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || 'null'),
             stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.STAMPS) || '[]'),
@@ -926,7 +926,7 @@ async function exportData() {
         
         const a = document.createElement('a');
         a.href = url;
-        a.download = `okozukai-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.download = 'okozukai-backup.json';  // 固定ファイル名
         a.click();
         
         URL.revokeObjectURL(url);
@@ -938,19 +938,164 @@ async function exportData() {
         };
         localStorage.setItem(STORAGE_KEYS.BACKUP, JSON.stringify(backupInfo));
         
-        // 初回バックアップの場合はガイドを表示
-        const hasShownGuide = localStorage.getItem('backup_guide_shown');
-        if (!hasShownGuide) {
-            showBackupGuide();
-            localStorage.setItem('backup_guide_shown', 'true');
-        }
-        
-        alert('バックアップファイルをほぞんしました！\n\niCloud DriveやGoogleドライブにほぞんしてね');
+        alert('バックアップファイルをほぞんしました！\n\nファイル名: okozukai-backup.json\niCloud DriveやGoogleドライブにほぞんしてね');
         
     } catch (error) {
         console.error('エクスポートエラー:', error);
         alert('バックアップがうまくいかなかったよ');
     }
+}
+
+// クリップボードにコピー
+async function copyToClipboard() {
+    try {
+        const backupData = {
+            version: '4.1.0-localStorage',
+            exported_at: new Date().toISOString(),
+            settings: JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || 'null'),
+            stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.STAMPS) || '[]'),
+            weekly_history: JSON.parse(localStorage.getItem(STORAGE_KEYS.WEEKLY_HISTORY) || '[]'),
+            custom_stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOM_STAMPS) || '[]'),
+            achievements: JSON.parse(localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) || '[]')
+        };
+        
+        const dataStr = JSON.stringify(backupData, null, 2);
+        
+        // クリップボードAPIを使用
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(dataStr);
+            alert('データをコピーしました！\n\nGoogleドライブを開いて：\n1. 新しいテキストファイルを作成\n2. 貼り付け（ペースト）\n3. 「okozukai-backup.txt」として保存');
+        } else {
+            // 古いブラウザ向けのフォールバック
+            const textArea = document.createElement('textarea');
+            textArea.value = dataStr;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-9999px';
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            alert('データをコピーしました！\n\nGoogleドライブを開いて：\n1. 新しいテキストファイルを作成\n2. 貼り付け（ペースト）\n3. 「okozukai-backup.txt」として保存');
+        }
+        
+        // 自動バックアップ情報も更新
+        const backupInfo = {
+            last_backup: Date.now(),
+            data: backupData
+        };
+        localStorage.setItem(STORAGE_KEYS.BACKUP, JSON.stringify(backupInfo));
+        
+    } catch (error) {
+        console.error('クリップボードコピーエラー:', error);
+        alert('コピーできませんでした。\nファイルでバックアップしてね');
+    }
+}
+
+// QRコード表示
+async function showQRCode() {
+    try {
+        const backupData = {
+            version: '4.1.0-localStorage',
+            exported_at: new Date().toISOString(),
+            settings: JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || 'null'),
+            stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.STAMPS) || '[]'),
+            weekly_history: JSON.parse(localStorage.getItem(STORAGE_KEYS.WEEKLY_HISTORY) || '[]'),
+            custom_stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOM_STAMPS) || '[]'),
+            achievements: JSON.parse(localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) || '[]')
+        };
+        
+        const dataStr = JSON.stringify(backupData);
+        
+        // データサイズチェック（QRコードには制限がある）
+        if (dataStr.length > 2000) {
+            if (!confirm('データがおおきいので、QRコードがよみとりにくいかもしれません。\n\nファイルかコピーをおすすめしますが、QRコードをひょうじしますか？')) {
+                return;
+            }
+        }
+        
+        const modal = document.getElementById('qrModal');
+        const canvas = document.getElementById('qrCanvas');
+        
+        // QRコード生成
+        QRCode.toCanvas(canvas, dataStr, {
+            width: 300,
+            margin: 2,
+            color: {
+                dark: '#000000',
+                light: '#FFFFFF'
+            }
+        }, function (error) {
+            if (error) {
+                console.error('QRコード生成エラー:', error);
+                alert('QRコードがつくれませんでした。\nデータがおおすぎるかもしれません。\nファイルかコピーをつかってね');
+            } else {
+                modal.classList.add('active');
+            }
+        });
+        
+    } catch (error) {
+        console.error('QRコード表示エラー:', error);
+        alert('QRコードがつくれませんでした');
+    }
+}
+
+// QRモーダルを閉じる
+function closeQRModal() {
+    const modal = document.getElementById('qrModal');
+    modal.classList.remove('active');
+}
+
+// クリップボードから復元
+async function pasteFromClipboard() {
+    try {
+        if (!confirm('いまのデータはぜんぶきえて、コピーしたデータにもどります。よろしいですか？')) {
+            return;
+        }
+        
+        let clipboardText = '';
+        
+        // クリップボードAPIを使用
+        if (navigator.clipboard && navigator.clipboard.readText) {
+            clipboardText = await navigator.clipboard.readText();
+        } else {
+            clipboardText = prompt('コピーしたデータをはりつけてください：\n\n（Googleドライブのテキストファイルをひらいて、ぜんぶせんたくしてコピーしてね）');
+            if (!clipboardText) {
+                return;
+            }
+        }
+        
+        const backupData = JSON.parse(clipboardText);
+        
+        // データを復元
+        if (backupData.settings) {
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(backupData.settings));
+        }
+        if (backupData.stamps) {
+            localStorage.setItem(STORAGE_KEYS.STAMPS, JSON.stringify(backupData.stamps));
+        }
+        if (backupData.weekly_history) {
+            localStorage.setItem(STORAGE_KEYS.WEEKLY_HISTORY, JSON.stringify(backupData.weekly_history));
+        }
+        if (backupData.custom_stamps) {
+            localStorage.setItem(STORAGE_KEYS.CUSTOM_STAMPS, JSON.stringify(backupData.custom_stamps));
+        }
+        if (backupData.achievements) {
+            localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(backupData.achievements));
+        }
+        
+        alert('データをふくげんしたよ！ページをさいどくします');
+        location.reload();
+        
+    } catch (error) {
+        console.error('クリップボード復元エラー:', error);
+        alert('ふくげんできませんでした。\nコピーしたデータがただしいかかくにんしてね');
+    }
+}
+
+// バックアップのエクスポート（旧版・互換性のため残す）
+async function exportData() {
+    // 新しい固定ファイル名版を呼び出す
+    return exportDataFixed();
 }
 
 // バックアップのインポート
