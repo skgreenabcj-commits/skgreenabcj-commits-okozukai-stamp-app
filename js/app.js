@@ -1,3 +1,4 @@
+// LocalStorage版 おこづかいスタンプアプリ
 // グローバル変数
 let currentWeekStart = null;
 let currentSettings = null;
@@ -6,6 +7,16 @@ let selectedCell = null;
 let customStamps = [];
 let isDeleteMode = false;
 let deleteModeLongPressTimer = null;
+
+// LocalStorageのキー
+const STORAGE_KEYS = {
+    SETTINGS: 'okozukai_settings',
+    STAMPS: 'okozukai_stamps',
+    WEEKLY_HISTORY: 'okozukai_weekly_history',
+    CUSTOM_STAMPS: 'okozukai_custom_stamps',
+    ACHIEVEMENTS: 'okozukai_achievements',
+    BACKUP: 'okozukai_backup'
+};
 
 // ページ読み込み時の初期化
 document.addEventListener('DOMContentLoaded', async () => {
@@ -19,47 +30,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     await checkAndPerformAutoBackup();
 });
 
-// 設定の読み込み
+// 設定の読み込み（LocalStorage版）
 async function loadSettings() {
     try {
-        const response = await fetch('tables/settings?limit=1');
-        const data = await response.json();
-        if (data.data && data.data.length > 0) {
-            currentSettings = data.data[0];
+        const data = localStorage.getItem(STORAGE_KEYS.SETTINGS);
+        if (data) {
+            currentSettings = JSON.parse(data);
             
-            // バッジ設定のデフォルト値を設定（存在しない場合）
-            if (currentSettings.badge_threshold === undefined || currentSettings.badge_threshold === null) {
+            // デフォルト値の設定
+            if (currentSettings.badge_threshold === undefined) {
                 currentSettings.badge_threshold = 10;
             }
-            if (currentSettings.badge_bonus === undefined || currentSettings.badge_bonus === null) {
+            if (currentSettings.badge_bonus === undefined) {
                 currentSettings.badge_bonus = 50;
-            }
-            
-            // デフォルト値をデータベースに保存
-            if (!data.data[0].badge_threshold || !data.data[0].badge_bonus) {
-                await fetch(`tables/settings/${currentSettings.id}`, {
-                    method: 'PATCH',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({
-                        badge_threshold: currentSettings.badge_threshold,
-                        badge_bonus: currentSettings.badge_bonus
-                    })
-                });
             }
         } else {
             // デフォルト設定を作成
-            const createResponse = await fetch('tables/settings', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({
-                    child_name: 'おなまえ',
-                    stamp_unit_price: 10,
-                    total_paid: 0,
-                    badge_threshold: 10,
-                    badge_bonus: 50
-                })
-            });
-            currentSettings = await createResponse.json();
+            currentSettings = {
+                id: 'settings_1',
+                child_name: 'おなまえ',
+                stamp_unit_price: 10,
+                total_paid: 0,
+                badge_threshold: 10,
+                badge_bonus: 50
+            };
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(currentSettings));
         }
         
         // 名前を表示
@@ -69,20 +64,19 @@ async function loadSettings() {
     }
 }
 
-// カスタムスタンプの読み込み
+// カスタムスタンプの読み込み（LocalStorage版）
 async function loadCustomStamps() {
     try {
-        const response = await fetch('tables/custom_stamps?limit=100');
-        const data = await response.json();
-        customStamps = data.data || [];
+        const data = localStorage.getItem(STORAGE_KEYS.CUSTOM_STAMPS);
+        if (data) {
+            customStamps = JSON.parse(data);
+        } else {
+            // 初期スタンプデータを作成
+            await initializeDefaultStamps();
+        }
         
-        // データが空の場合は初期データを作成
         if (customStamps.length === 0) {
             await initializeDefaultStamps();
-            // 再度読み込み
-            const reloadResponse = await fetch('tables/custom_stamps?limit=100');
-            const reloadData = await reloadResponse.json();
-            customStamps = reloadData.data || [];
         }
         
         updateStampPalette();
@@ -93,35 +87,24 @@ async function loadCustomStamps() {
 
 // 初期スタンプデータの作成
 async function initializeDefaultStamps() {
-    const defaultStamps = [
-        { stamp_name: 'プリンセス', stamp_emoji: '👸', is_active: true },
-        { stamp_name: 'きらきら', stamp_emoji: '🌟', is_active: true },
-        { stamp_name: 'おいわい', stamp_emoji: '🎉', is_active: true },
-        { stamp_name: 'トロフィー', stamp_emoji: '🏆', is_active: true },
-        { stamp_name: 'ねこ', stamp_emoji: '🐱', is_active: true },
-        { stamp_name: 'ちょうちょ', stamp_emoji: '🦋', is_active: true },
-        { stamp_name: 'にじ', stamp_emoji: '🌈', is_active: false },
-        { stamp_name: 'おはな', stamp_emoji: '🌸', is_active: false },
-        { stamp_name: 'メダル', stamp_emoji: '🏅', is_active: false },
-        { stamp_name: 'くるま', stamp_emoji: '🚗', is_active: false },
-        { stamp_name: 'でんしゃ', stamp_emoji: '🚂', is_active: false },
-        { stamp_name: 'はたらくくるま', stamp_emoji: '🚜', is_active: false },
-        { stamp_name: 'おうかん', stamp_emoji: '👑', is_active: false },
-        { stamp_name: 'はーと', stamp_emoji: '💝', is_active: false }
+    customStamps = [
+        { id: 'stamp_1', stamp_name: 'プリンセス', stamp_emoji: '👸', is_active: true },
+        { id: 'stamp_2', stamp_name: 'きらきら', stamp_emoji: '🌟', is_active: true },
+        { id: 'stamp_3', stamp_name: 'おいわい', stamp_emoji: '🎉', is_active: true },
+        { id: 'stamp_4', stamp_name: 'トロフィー', stamp_emoji: '🏆', is_active: true },
+        { id: 'stamp_5', stamp_name: 'ねこ', stamp_emoji: '🐱', is_active: true },
+        { id: 'stamp_6', stamp_name: 'ちょうちょ', stamp_emoji: '🦋', is_active: true },
+        { id: 'stamp_7', stamp_name: 'にじ', stamp_emoji: '🌈', is_active: false },
+        { id: 'stamp_8', stamp_name: 'おはな', stamp_emoji: '🌸', is_active: false },
+        { id: 'stamp_9', stamp_name: 'メダル', stamp_emoji: '🏅', is_active: false },
+        { id: 'stamp_10', stamp_name: 'くるま', stamp_emoji: '🚗', is_active: false },
+        { id: 'stamp_11', stamp_name: 'でんしゃ', stamp_emoji: '🚂', is_active: false },
+        { id: 'stamp_12', stamp_name: 'はたらくくるま', stamp_emoji: '🚜', is_active: false },
+        { id: 'stamp_13', stamp_name: 'おうかん', stamp_emoji: '👑', is_active: false },
+        { id: 'stamp_14', stamp_name: 'はーと', stamp_emoji: '💝', is_active: false }
     ];
-    
-    try {
-        for (const stamp of defaultStamps) {
-            await fetch('tables/custom_stamps', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(stamp)
-            });
-        }
-        console.log('初期スタンプデータを作成しました');
-    } catch (error) {
-        console.error('初期スタンプデータ作成エラー:', error);
-    }
+    localStorage.setItem(STORAGE_KEYS.CUSTOM_STAMPS, JSON.stringify(customStamps));
+    console.log('初期スタンプデータを作成しました');
 }
 
 // スタンプパレットの更新
@@ -142,12 +125,11 @@ function updateStampPalette() {
     }
 }
 
-
 // 月曜日を週の開始日として取得
 function getWeekStart(date) {
     const d = new Date(date);
     const day = d.getDay();
-    const diff = day === 0 ? -6 : 1 - day; // 日曜日の場合は-6、それ以外は月曜日までの差分
+    const diff = day === 0 ? -6 : 1 - day;
     d.setDate(d.getDate() + diff);
     d.setHours(0, 0, 0, 0);
     return d;
@@ -161,7 +143,7 @@ function formatDate(date) {
     return `${year}-${month}-${day}`;
 }
 
-// 週ラベルの生成（●がつ●にちのしゅう）
+// 週ラベルの生成
 function getWeekLabel(weekStart) {
     const month = weekStart.getMonth() + 1;
     const day = weekStart.getDate();
@@ -173,16 +155,10 @@ const dayNames = ['げつ', 'か', 'すい', 'もく', 'きん', 'ど', 'にち'
 
 // スタンプページの初期化
 async function initStampPage() {
-    // 設定を最新に更新
     await loadSettings();
     
-    // 週ラベルの設定
     document.getElementById('weekLabel').textContent = getWeekLabel(currentWeekStart);
-    
-    // スタンプ表の生成
     await generateStampTable();
-    
-    // 週の集計を更新
     await updateWeeklySummary();
 }
 
@@ -194,7 +170,6 @@ async function generateStampTable() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    // 週の各日のデータを取得
     const stamps = await getWeekStamps(currentWeekStart);
     
     for (let i = 0; i < 7; i++) {
@@ -205,116 +180,110 @@ async function generateStampTable() {
         const isToday = currentDate.getTime() === today.getTime();
         
         const row = document.createElement('tr');
+        if (isToday) {
+            row.classList.add('today');
+        }
         
-        // 曜日セル
         const dayCell = document.createElement('td');
-        dayCell.className = isToday ? 'day-cell today' : 'day-cell';
+        dayCell.className = 'day-cell';
         dayCell.textContent = dayNames[i];
         row.appendChild(dayCell);
         
-        // 各カテゴリーのスタンプセル
         const categories = ['おべんきょう', 'おてつだい', 'よいこ'];
-        let dayTotal = 0;
-        
         categories.forEach(category => {
             const cell = document.createElement('td');
             cell.className = 'stamp-cell';
             cell.dataset.date = dateStr;
             cell.dataset.category = category;
             
-            const stampData = stamps.filter(s => s.date === dateStr && s.category === category);
-            const stampCount = stampData.reduce((sum, s) => sum + s.stamp_count, 0);
-            dayTotal += stampCount;
+            const dayStamps = stamps.filter(s => s.date === dateStr && s.category === category);
             
-            if (stampCount > 0) {
-                const display = document.createElement('div');
-                display.className = 'stamp-display';
-                stampData.forEach(s => {
-                    for (let j = 0; j < s.stamp_count; j++) {
-                        const stamp = document.createElement('span');
-                        stamp.textContent = s.stamp_type;
-                        display.appendChild(stamp);
-                    }
-                });
-                cell.appendChild(display);
-            }
-            
-            cell.addEventListener('click', () => openStampModal(dateStr, category));
-            
-            // 長押しで削除モード
-            let longPressTimer;
-            cell.addEventListener('touchstart', (e) => {
-                if (stampCount > 0) {
-                    longPressTimer = setTimeout(() => {
-                        enableDeleteMode();
-                    }, 800);
+            dayStamps.forEach(stamp => {
+                for (let j = 0; j < stamp.stamp_count; j++) {
+                    const stampSpan = document.createElement('span');
+                    stampSpan.className = 'stamp';
+                    stampSpan.textContent = stamp.stamp_type;
+                    cell.appendChild(stampSpan);
                 }
             });
+            
+            // タッチイベント
+            let longPressTimer;
+            cell.addEventListener('touchstart', (e) => {
+                if (isDeleteMode) return;
+                
+                longPressTimer = setTimeout(() => {
+                    if (dayStamps.length > 0) {
+                        enterDeleteMode(cell);
+                    }
+                }, 800);
+            }, { passive: true });
+            
             cell.addEventListener('touchend', () => {
                 clearTimeout(longPressTimer);
             });
+            
             cell.addEventListener('touchmove', () => {
                 clearTimeout(longPressTimer);
+            });
+            
+            // クリックイベント
+            cell.addEventListener('click', (e) => {
+                if (isDeleteMode) {
+                    deleteStampsFromCell(cell);
+                } else {
+                    if (dayStamps.length < 2) {
+                        selectedCell = cell;
+                        openStampModal(dateStr, category);
+                    } else {
+                        alert('1にち1つのくぶんに2このまでだよ！');
+                    }
+                }
             });
             
             row.appendChild(cell);
         });
         
-        // 日ごとの合計
-        const totalCell = document.createElement('td');
-        totalCell.className = 'count-cell';
-        totalCell.textContent = dayTotal;
-        row.appendChild(totalCell);
-        
         tbody.appendChild(row);
     }
 }
 
-// 週のスタンプデータを取得
+// 週のスタンプデータ取得（LocalStorage版）
 async function getWeekStamps(weekStart) {
     try {
+        const allStamps = JSON.parse(localStorage.getItem(STORAGE_KEYS.STAMPS) || '[]');
         const weekStartStr = formatDate(weekStart);
-        const response = await fetch(`tables/stamps?limit=100`);
-        const data = await response.json();
-        
-        return data.data.filter(s => s.week_start === weekStartStr);
+        return allStamps.filter(s => s.week_start === weekStartStr);
     } catch (error) {
-        console.error('スタンプデータの取得エラー:', error);
+        console.error('スタンプデータ取得エラー:', error);
         return [];
     }
 }
 
 // スタンプモーダルを開く
 function openStampModal(date, category) {
-    if (isDeleteMode) {
-        // 削除モードの場合はスタンプ削除
-        deleteStamps(date, category);
-        return;
-    }
-    
-    selectedCell = { date, category };
-    
     const modal = document.getElementById('stampModal');
     const modalInfo = document.getElementById('modalInfo');
     
     const dateObj = new Date(date);
-    const dayOfWeek = dayNames[dateObj.getDay() === 0 ? 6 : dateObj.getDay() - 1];
+    const month = dateObj.getMonth() + 1;
+    const day = dateObj.getDate();
+    const dayIndex = dateObj.getDay();
+    const adjustedDayIndex = dayIndex === 0 ? 6 : dayIndex - 1;
     
-    modalInfo.textContent = `${dayOfWeek}ようび：${category}`;
+    modalInfo.textContent = `${month}がつ${day}にち（${dayNames[adjustedDayIndex]}）の「${category}」`;
     
-    // アクティブなスタンプを取得
+    const selection = document.getElementById('stampSelection');
+    selection.innerHTML = '';
+    
     const activeStamps = customStamps.filter(s => s.is_active).slice(0, 6);
-    
-    // スタンプ選択エリアを更新
-    const stampSelection = document.getElementById('stampSelection');
-    stampSelection.innerHTML = '';
     activeStamps.forEach(stamp => {
         const btn = document.createElement('button');
         btn.className = 'stamp-select-btn';
         btn.dataset.stamp = stamp.stamp_emoji;
         btn.textContent = stamp.stamp_emoji;
-        btn.onclick = () => addStamp(stamp.stamp_emoji);
-        stampSelection.appendChild(btn);
+        btn.addEventListener('click', () => addStamp(date, category, stamp.stamp_emoji));
+        selection.appendChild(btn);
     });
     
     modal.classList.add('active');
@@ -322,46 +291,32 @@ function openStampModal(date, category) {
 
 // モーダルを閉じる
 function closeModal() {
-    document.getElementById('stampModal').classList.remove('active');
+    const modal = document.getElementById('stampModal');
+    modal.classList.remove('active');
     selectedCell = null;
 }
 
-// スタンプを追加
-async function addStamp(stampType) {
-    if (!selectedCell) return;
-    
-    const { date, category } = selectedCell;
-    const weekStartStr = formatDate(currentWeekStart);
-    
+// スタンプを追加（LocalStorage版）
+async function addStamp(date, category, stampType) {
     try {
-        // 現在のスタンプ数を確認
-        const stamps = await getWeekStamps(currentWeekStart);
-        const existingStamps = stamps.filter(s => s.date === date && s.category === category);
-        const currentCount = existingStamps.reduce((sum, s) => sum + s.stamp_count, 0);
+        const allStamps = JSON.parse(localStorage.getItem(STORAGE_KEYS.STAMPS) || '[]');
         
-        if (currentCount >= 2) {
-            alert('もう2つスタンプがおしてあるよ！');
-            closeModal();
-            return;
-        }
+        const newStamp = {
+            id: 'stamp_' + Date.now(),
+            week_start: formatDate(currentWeekStart),
+            date: date,
+            category: category,
+            stamp_type: stampType,
+            stamp_count: 1,
+            created_at: Date.now()
+        };
         
-        // スタンプを追加
-        await fetch('tables/stamps', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                week_start: weekStartStr,
-                date: date,
-                category: category,
-                stamp_type: stampType,
-                stamp_count: 1
-            })
-        });
+        allStamps.push(newStamp);
+        localStorage.setItem(STORAGE_KEYS.STAMPS, JSON.stringify(allStamps));
         
-        // 表示を更新
+        closeModal();
         await generateStampTable();
         await updateWeeklySummary();
-        closeModal();
         
     } catch (error) {
         console.error('スタンプ追加エラー:', error);
@@ -369,164 +324,228 @@ async function addStamp(stampType) {
     }
 }
 
-// 週の集計を更新
-async function updateWeeklySummary() {
-    const stamps = await getWeekStamps(currentWeekStart);
-    const totalStamps = stamps.reduce((sum, s) => sum + s.stamp_count, 0);
+// 削除モードに入る
+function enterDeleteMode(cell) {
+    isDeleteMode = true;
     
-    // 各カテゴリーのスタンプ数を計算
-    const categories = ['おべんきょう', 'おてつだい', 'よいこ'];
-    const categoryStamps = {};
-    categories.forEach(cat => {
-        categoryStamps[cat] = stamps.filter(s => s.category === cat).reduce((sum, s) => sum + s.stamp_count, 0);
-    });
+    const banner = document.createElement('div');
+    banner.id = 'deleteModeBanner';
+    banner.className = 'delete-mode-banner';
+    banner.innerHTML = `
+        <span>けすモード：けしたいマスをタップしてね</span>
+        <button onclick="exitDeleteMode()">もどる</button>
+    `;
+    document.body.insertBefore(banner, document.body.firstChild);
     
-    // 達成バッジのチェック（設定値に基づく）
-    const badgeThreshold = currentSettings.badge_threshold || 10;
-    const badgeBonus = currentSettings.badge_bonus || 50;
-    
-    const achievements = [];
-    let totalBonus = 0;
-    categories.forEach(cat => {
-        if (categoryStamps[cat] >= badgeThreshold) {
-            achievements.push({
-                category: cat,
-                count: categoryStamps[cat],
-                bonus: badgeBonus
-            });
-            totalBonus += badgeBonus;
+    document.querySelectorAll('.stamp-cell').forEach(c => {
+        if (c.children.length > 0) {
+            c.classList.add('delete-mode');
         }
     });
+}
+
+// 削除モードを終了
+function exitDeleteMode() {
+    isDeleteMode = false;
+    const banner = document.getElementById('deleteModeBanner');
+    if (banner) {
+        banner.remove();
+    }
+    document.querySelectorAll('.stamp-cell').forEach(c => {
+        c.classList.remove('delete-mode');
+    });
+}
+
+// セルからスタンプを削除（LocalStorage版）
+async function deleteStampsFromCell(cell) {
+    const date = cell.dataset.date;
+    const category = cell.dataset.category;
     
-    // 達成バッジの表示
-    displayAchievements(achievements);
-    
-    // 前週からの持ち越し額を取得
-    const previousCarryover = await getPreviousCarryover();
-    
-    // 今週の合計金額（持ち越し含む + ボーナス含む）
-    const totalAmount = totalStamps * currentSettings.stamp_unit_price + previousCarryover + totalBonus;
-    
-    // 100円単位で給付
-    const allowancePaid = Math.floor(totalAmount / 100) * 100;
-    
-    // 持ち越し額（100円未満）
-    const carryover = totalAmount - allowancePaid;
-    
-    // 表示更新
-    document.getElementById('weeklyStamps').textContent = totalStamps;
-    document.getElementById('weeklyAllowance').textContent = `${allowancePaid}えん`;
-    document.getElementById('carryoverAmount').textContent = `${carryover}えん`;
-    
-    // ボーナスセクションの表示
-    const bonusSection = document.getElementById('bonusSection');
-    if (totalBonus > 0) {
-        bonusSection.style.display = 'block';
-        document.getElementById('bonusAmount').textContent = `${totalBonus}えん`;
-    } else {
-        bonusSection.style.display = 'none';
+    if (!confirm(`${category}のスタンプをけしてもいいですか？`)) {
+        return;
     }
     
-    // 持ち越しセクションの表示制御
-    const carryoverSection = document.getElementById('carryoverSection');
-    if (carryover > 0) {
-        carryoverSection.style.display = 'block';
-    } else {
-        carryoverSection.style.display = 'none';
-    }
-    
-    // 週履歴の保存/更新
-    await saveWeeklyHistory(totalStamps, allowancePaid, carryover);
-    
-    // 達成記録の保存
-    if (achievements.length > 0) {
-        await saveAchievements(achievements);
+    try {
+        const allStamps = JSON.parse(localStorage.getItem(STORAGE_KEYS.STAMPS) || '[]');
+        const filtered = allStamps.filter(s => !(s.date === date && s.category === category));
+        localStorage.setItem(STORAGE_KEYS.STAMPS, JSON.stringify(filtered));
+        
+        exitDeleteMode();
+        await generateStampTable();
+        await updateWeeklySummary();
+        
+    } catch (error) {
+        console.error('削除エラー:', error);
+        alert('エラーがおきたよ');
     }
 }
 
-// 前週の持ち越し額を取得
+// 週の集計を更新
+async function updateWeeklySummary() {
+    try {
+        const stamps = await getWeekStamps(currentWeekStart);
+        const totalStamps = stamps.reduce((sum, s) => sum + s.stamp_count, 0);
+        
+        // 達成バッジの判定
+        const achievements = await checkAchievements(stamps);
+        displayAchievements(achievements);
+        
+        const totalBonus = achievements.reduce((sum, a) => sum + a.bonus_amount, 0);
+        
+        const previousCarryover = await getPreviousCarryover();
+        const totalAmount = totalStamps * currentSettings.stamp_unit_price + previousCarryover + totalBonus;
+        const allowancePaid = Math.floor(totalAmount / 100) * 100;
+        const carryover = totalAmount - allowancePaid;
+        
+        document.getElementById('weeklyStamps').textContent = totalStamps;
+        document.getElementById('weeklyAllowance').textContent = `${allowancePaid}えん`;
+        document.getElementById('carryoverAmount').textContent = `${carryover}えん`;
+        
+        const bonusSection = document.getElementById('bonusSection');
+        if (totalBonus > 0) {
+            bonusSection.style.display = 'block';
+            document.getElementById('bonusAmount').textContent = `${totalBonus}えん`;
+        } else {
+            bonusSection.style.display = 'none';
+        }
+        
+        const carryoverSection = document.getElementById('carryoverSection');
+        if (carryover > 0) {
+            carryoverSection.style.display = 'block';
+        } else {
+            carryoverSection.style.display = 'none';
+        }
+        
+        await saveWeeklyHistory(totalStamps, allowancePaid, carryover);
+        
+        if (achievements.length > 0) {
+            await saveAchievements(achievements);
+        }
+    } catch (error) {
+        console.error('集計更新エラー:', error);
+    }
+}
+
+// 前週の持ち越し額を取得（LocalStorage版）
 async function getPreviousCarryover() {
     try {
         const previousWeekStart = new Date(currentWeekStart);
         previousWeekStart.setDate(previousWeekStart.getDate() - 7);
         const previousWeekStartStr = formatDate(previousWeekStart);
         
-        const response = await fetch(`tables/weekly_history?limit=100`);
-        const data = await response.json();
+        const allHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.WEEKLY_HISTORY) || '[]');
+        const previousWeek = allHistory.find(h => h.week_start === previousWeekStartStr);
         
-        const previousWeek = data.data.find(w => w.week_start === previousWeekStartStr);
         return previousWeek ? previousWeek.carryover : 0;
     } catch (error) {
-        console.error('前週持ち越し額の取得エラー:', error);
+        console.error('持ち越し額取得エラー:', error);
         return 0;
     }
 }
 
-// 週履歴の保存
+// 達成バッジの判定
+async function checkAchievements(stamps) {
+    const achievements = [];
+    const categories = ['おべんきょう', 'おてつだい', 'よいこ'];
+    
+    categories.forEach(category => {
+        const categoryStamps = stamps.filter(s => s.category === category);
+        const count = categoryStamps.reduce((sum, s) => sum + s.stamp_count, 0);
+        
+        if (count >= currentSettings.badge_threshold) {
+            achievements.push({
+                week_start: formatDate(currentWeekStart),
+                category: category,
+                stamp_count: count,
+                bonus_amount: currentSettings.badge_bonus
+            });
+        }
+    });
+    
+    return achievements;
+}
+
+// 達成バッジの表示
+function displayAchievements(achievements) {
+    const container = document.getElementById('achievementBadges');
+    container.innerHTML = '';
+    
+    if (achievements.length === 0) {
+        return;
+    }
+    
+    achievements.forEach(achievement => {
+        const badge = document.createElement('div');
+        badge.className = 'achievement-badge';
+        badge.innerHTML = `
+            <div class="badge-icon">🏆</div>
+            <div class="badge-text">
+                <div class="badge-category">${achievement.category}</div>
+                <div class="badge-amount">+${achievement.bonus_amount}えん</div>
+            </div>
+        `;
+        container.appendChild(badge);
+    });
+}
+
+// 週履歴の保存（LocalStorage版）
 async function saveWeeklyHistory(totalStamps, allowancePaid, carryover) {
     try {
         const weekStartStr = formatDate(currentWeekStart);
         const weekLabel = getWeekLabel(currentWeekStart);
         
-        const response = await fetch(`tables/weekly_history?limit=100`);
-        const data = await response.json();
+        const allHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.WEEKLY_HISTORY) || '[]');
+        const existingIndex = allHistory.findIndex(h => h.week_start === weekStartStr);
         
-        const existing = data.data.find(w => w.week_start === weekStartStr);
-        
-        const historyData = {
+        const historyItem = {
+            id: existingIndex >= 0 ? allHistory[existingIndex].id : 'history_' + Date.now(),
             week_start: weekStartStr,
             week_label: weekLabel,
             total_stamps: totalStamps,
             allowance_paid: allowancePaid,
-            carryover: carryover
+            carryover: carryover,
+            updated_at: Date.now()
         };
         
-        if (existing) {
-            // 更新
-            await fetch(`tables/weekly_history/${existing.id}`, {
-                method: 'PUT',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(historyData)
-            });
+        if (existingIndex >= 0) {
+            allHistory[existingIndex] = historyItem;
         } else {
-            // 新規作成
-            await fetch('tables/weekly_history', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify(historyData)
-            });
+            allHistory.push(historyItem);
         }
+        
+        localStorage.setItem(STORAGE_KEYS.WEEKLY_HISTORY, JSON.stringify(allHistory));
         
         // 累積給付額を更新
         if (allowancePaid > 0) {
-            await updateTotalPaid(allowancePaid);
+            currentSettings.total_paid = (currentSettings.total_paid || 0) + allowancePaid;
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(currentSettings));
         }
     } catch (error) {
-        console.error('週履歴の保存エラー:', error);
+        console.error('週履歴保存エラー:', error);
     }
 }
 
-// 累積給付額を更新
-async function updateTotalPaid(newAmount) {
+// 達成記録の保存（LocalStorage版）
+async function saveAchievements(achievements) {
     try {
-        // 既存の全履歴から合計を計算
-        const response = await fetch('tables/weekly_history?limit=1000');
-        const data = await response.json();
+        const allAchievements = JSON.parse(localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) || '[]');
+        const weekStartStr = formatDate(currentWeekStart);
         
-        const totalPaid = data.data.reduce((sum, w) => sum + w.allowance_paid, 0);
+        // 今週の達成記録を削除
+        const filtered = allAchievements.filter(a => a.week_start !== weekStartStr);
         
-        // 設定を更新
-        await fetch(`tables/settings/${currentSettings.id}`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                total_paid: totalPaid
-            })
+        // 新しい達成記録を追加
+        achievements.forEach(achievement => {
+            filtered.push({
+                id: 'achievement_' + Date.now() + '_' + achievement.category,
+                ...achievement,
+                created_at: Date.now()
+            });
         });
         
-        currentSettings.total_paid = totalPaid;
+        localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(filtered));
     } catch (error) {
-        console.error('累積給付額の更新エラー:', error);
+        console.error('達成記録保存エラー:', error);
     }
 }
 
@@ -540,26 +559,27 @@ async function initHistoryPage() {
 // 累積給付額の表示更新
 async function updateTotalPaidDisplay() {
     await loadSettings();
-    document.getElementById('totalPaid').textContent = `${currentSettings.total_paid}えん`;
+    document.getElementById('totalPaid').textContent = `${currentSettings.total_paid || 0}えん`;
 }
 
-// 週ごとのグラフを更新
+// 週ごとのグラフを更新（LocalStorage版）
 async function updateWeeklyChart() {
     try {
-        const response = await fetch('tables/weekly_history?limit=100&sort=-week_start');
-        const data = await response.json();
+        const allHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.WEEKLY_HISTORY) || '[]');
         
-        // 最新10週分を取得（逆順にする）
-        const recentWeeks = data.data.slice(0, 10).reverse();
+        // 週の開始日で降順ソート
+        allHistory.sort((a, b) => new Date(b.week_start) - new Date(a.week_start));
+        
+        const recentWeeks = allHistory.slice(0, 10).reverse();
         
         const labels = recentWeeks.map(w => {
             const date = new Date(w.week_start);
             return `${date.getMonth() + 1}/${date.getDate()}`;
         });
         
-        const amounts = recentWeeks.map(w => w.allowance_paid);
+        const data = recentWeeks.map(w => w.allowance_paid);
         
-        const ctx = document.getElementById('weeklyChart').getContext('2d');
+        const ctx = document.getElementById('weeklyChart');
         
         if (weeklyChart) {
             weeklyChart.destroy();
@@ -571,27 +591,21 @@ async function updateWeeklyChart() {
                 labels: labels,
                 datasets: [{
                     label: 'おこづかい（えん）',
-                    data: amounts,
-                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                    data: data,
+                    backgroundColor: 'rgba(102, 126, 234, 0.8)',
                     borderColor: 'rgba(102, 126, 234, 1)',
-                    borderWidth: 2,
-                    borderRadius: 8
+                    borderWidth: 2
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
                 scales: {
                     y: {
                         beginAtZero: true,
                         ticks: {
                             font: {
-                                size: 14,
+                                size: 12,
                                 weight: 'bold'
                             }
                         }
@@ -612,21 +626,21 @@ async function updateWeeklyChart() {
     }
 }
 
-// 履歴リストの更新
+// 履歴リストの更新（LocalStorage版）
 async function updateHistoryList() {
     try {
-        const response = await fetch('tables/weekly_history?limit=100&sort=-week_start');
-        const data = await response.json();
+        const allHistory = JSON.parse(localStorage.getItem(STORAGE_KEYS.WEEKLY_HISTORY) || '[]');
+        allHistory.sort((a, b) => new Date(b.week_start) - new Date(a.week_start));
         
         const listContainer = document.getElementById('historyList');
         listContainer.innerHTML = '';
         
-        if (data.data.length === 0) {
+        if (allHistory.length === 0) {
             listContainer.innerHTML = '<p style="text-align:center; padding:20px; color:#6c757d;">まだりれきがないよ</p>';
             return;
         }
         
-        data.data.forEach(week => {
+        allHistory.forEach(week => {
             const item = document.createElement('div');
             item.className = 'history-item';
             
@@ -651,7 +665,7 @@ async function updateHistoryList() {
             listContainer.appendChild(item);
         });
     } catch (error) {
-        console.error('履歴リストの更新エラー:', error);
+        console.error('履歴リスト更新エラー:', error);
     }
 }
 
@@ -679,167 +693,27 @@ async function showPage(pageName) {
     } else if (pageName === 'settings') {
         document.getElementById('settingsPage').classList.add('active');
         tabs[2].classList.add('active');
-        // 設定を最新の状態に更新してから初期化
-        loadSettings().then(() => {
-            if (customStamps.length === 0) {
-                loadCustomStamps().then(() => initSettingsPage());
-            } else {
-                initSettingsPage();
-            }
-        });
-    }
-}
-
-// 達成バッジの表示
-function displayAchievements(achievements) {
-    const container = document.getElementById('achievementBadges');
-    container.innerHTML = '';
-    
-    if (achievements.length === 0) {
-        return;
-    }
-    
-    achievements.forEach(ach => {
-        const badge = document.createElement('div');
-        badge.className = 'achievement-badge';
-        
-        badge.innerHTML = `
-            <div class="achievement-badge-icon">🏆</div>
-            <div class="achievement-badge-text">
-                <div class="achievement-badge-title">たっせい！</div>
-                <div class="achievement-badge-detail">${ach.category}：${ach.count}こ</div>
-            </div>
-            <div class="achievement-badge-bonus">+${ach.bonus}えん</div>
-        `;
-        
-        container.appendChild(badge);
-    });
-}
-
-// 達成記録の保存
-async function saveAchievements(achievements) {
-    try {
-        const weekStartStr = formatDate(currentWeekStart);
-        
-        for (const ach of achievements) {
-            const response = await fetch('tables/achievements?limit=100');
-            const data = await response.json();
-            
-            const existing = data.data.find(a => 
-                a.week_start === weekStartStr && a.category === ach.category
-            );
-            
-            const achData = {
-                week_start: weekStartStr,
-                category: ach.category,
-                stamp_count: ach.count,
-                bonus_amount: ach.bonus
-            };
-            
-            if (!existing) {
-                await fetch('tables/achievements', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(achData)
-                });
-            }
+        await loadSettings();
+        if (customStamps.length === 0) {
+            await loadCustomStamps();
         }
-    } catch (error) {
-        console.error('達成記録の保存エラー:', error);
-    }
-}
-
-// 削除モードの有効化
-function enableDeleteMode() {
-    isDeleteMode = true;
-    
-    // バナーを表示
-    const banner = document.createElement('div');
-    banner.className = 'delete-mode-banner';
-    banner.id = 'deleteModeBanner';
-    banner.textContent = 'スタンプをけすモード：けしたいマスをおしてね';
-    document.body.appendChild(banner);
-    
-    // キャンセルボタンを表示
-    const buttons = document.createElement('div');
-    buttons.className = 'delete-mode-buttons';
-    buttons.id = 'deleteModeButtons';
-    buttons.innerHTML = `
-        <button class="btn-delete-mode cancel" onclick="disableDeleteMode()">もどる</button>
-    `;
-    document.body.appendChild(buttons);
-    
-    // テーブルセルにクラスを追加
-    document.querySelectorAll('.stamp-cell').forEach(cell => {
-        if (cell.querySelector('.stamp-display')) {
-            cell.classList.add('delete-mode');
-        }
-    });
-}
-
-// 削除モードの無効化
-function disableDeleteMode() {
-    isDeleteMode = false;
-    
-    const banner = document.getElementById('deleteModeBanner');
-    const buttons = document.getElementById('deleteModeButtons');
-    if (banner) banner.remove();
-    if (buttons) buttons.remove();
-    
-    document.querySelectorAll('.stamp-cell').forEach(cell => {
-        cell.classList.remove('delete-mode');
-    });
-}
-
-// スタンプの削除
-async function deleteStamps(date, category) {
-    if (!confirm(`${category}のスタンプをぜんぶけしてもいいですか？`)) {
-        return;
-    }
-    
-    try {
-        const stamps = await getWeekStamps(currentWeekStart);
-        const stampsToDelete = stamps.filter(s => s.date === date && s.category === category);
-        
-        for (const stamp of stampsToDelete) {
-            await fetch(`tables/stamps/${stamp.id}`, {
-                method: 'DELETE'
-            });
-        }
-        
-        await generateStampTable();
-        await updateWeeklySummary();
-        disableDeleteMode();
-        
-    } catch (error) {
-        console.error('スタンプ削除エラー:', error);
-        alert('エラーがおきたよ');
+        await initSettingsPage();
     }
 }
 
 // 設定ページの初期化
 async function initSettingsPage() {
-    // 基本設定の読み込み
     if (!currentSettings) {
-        console.log('設定データがありません。読み込みます...');
         await loadSettings();
     }
     
     document.getElementById('childName').value = currentSettings.child_name || '';
     document.getElementById('stampPrice').value = currentSettings.stamp_unit_price || 10;
-    
-    // バッジ設定の読み込み
     document.getElementById('badgeThreshold').value = currentSettings.badge_threshold || 10;
     document.getElementById('badgeBonus').value = currentSettings.badge_bonus || 50;
     
-    console.log('設定値を反映:', {
-        name: currentSettings.child_name,
-        price: currentSettings.stamp_unit_price,
-        threshold: currentSettings.badge_threshold,
-        bonus: currentSettings.badge_bonus
-    });
+    console.log('設定値を反映:', currentSettings);
     
-    // スタンプ設定リストの生成
     const container = document.getElementById('stampSettingsList');
     container.innerHTML = '';
     
@@ -855,8 +729,6 @@ async function initSettingsPage() {
         const item = document.createElement('div');
         item.className = 'stamp-setting-item' + (stamp.is_active ? ' active' : '');
         item.dataset.stampId = stamp.id;
-        
-        // 選択可能であることを示すために、カーソルとホバー効果を強調
         item.style.cursor = 'pointer';
         
         item.innerHTML = `
@@ -867,14 +739,12 @@ async function initSettingsPage() {
             </div>
         `;
         
-        // iPhoneでも動作するようにtouchイベントとclickイベントの両方を追加
         let touchHandled = false;
         let touchStartTime = 0;
         
         item.addEventListener('touchstart', (e) => {
             touchHandled = false;
             touchStartTime = Date.now();
-            // 視覚的フィードバック
             item.style.transform = 'scale(0.95)';
             item.style.opacity = '0.7';
         }, { passive: true });
@@ -883,11 +753,9 @@ async function initSettingsPage() {
             e.preventDefault();
             const touchDuration = Date.now() - touchStartTime;
             
-            // 視覚的フィードバックをリセット
             item.style.transform = 'scale(1)';
             item.style.opacity = '1';
             
-            // タップとして認識（短時間のタッチ）
             if (touchDuration < 500) {
                 touchHandled = true;
                 console.log(`タッチイベント: ${stamp.stamp_name} (${index + 1}/${customStamps.length})`);
@@ -903,7 +771,6 @@ async function initSettingsPage() {
             touchHandled = false;
         });
         
-        // ホバー効果（デスクトップ用）
         item.addEventListener('mouseenter', () => {
             item.style.transform = 'scale(1.05)';
         });
@@ -920,7 +787,7 @@ async function initSettingsPage() {
     console.log(`スタンプリスト生成完了: 全${customStamps.length}件 (有効: ${activeCount}件)`);
 }
 
-// スタンプの有効/無効切り替え
+// スタンプの有効/無効切り替え（LocalStorage版）
 async function toggleStamp(stampId) {
     try {
         console.log('========================================');
@@ -937,51 +804,25 @@ async function toggleStamp(stampId) {
         console.log('対象スタンプ:', stamp.stamp_emoji, stamp.stamp_name);
         console.log('現在の状態:', stamp.is_active ? '有効' : '無効');
         
-        // アクティブなスタンプ数をカウント
         const activeCount = customStamps.filter(s => s.is_active).length;
         console.log('現在の有効スタンプ数:', activeCount);
         
-        // 有効にする場合、6個を超えないかチェック
         if (!stamp.is_active && activeCount >= 6) {
             console.log('6個制限により変更不可');
             alert('スタンプは6このまでだよ！\n\nさきにほかのをタップして\nけしてから、もういちど\nためしてね');
             return;
         }
         
-        // 切り替え
         const newState = !stamp.is_active;
         console.log('新しい状態:', newState ? '有効' : '無効');
-        console.log('データベース更新開始...');
         
-        const response = await fetch(`tables/custom_stamps/${stamp.id}`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ is_active: newState })
-        });
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('更新失敗:', response.status, errorText);
-            throw new Error(`更新失敗: ${response.status}`);
-        }
-        
-        console.log('データベース更新成功');
-        
-        // データベースから最新の状態を取得して確認
-        const verifyResponse = await fetch(`tables/custom_stamps/${stamp.id}`);
-        const verifyData = await verifyResponse.json();
-        console.log('データベース確認:', verifyData.is_active ? '有効' : '無効');
-        
-        // ローカルのデータも更新
         stamp.is_active = newState;
+        localStorage.setItem(STORAGE_KEYS.CUSTOM_STAMPS, JSON.stringify(customStamps));
         
-        // スタンプパレットを更新（メインページ用）
+        console.log('LocalStorage更新成功');
+        
         updateStampPalette();
         console.log('スタンプパレット更新完了');
-        
-        // スタンプデータを再読み込みしてから設定画面を再描画
-        await loadCustomStamps();
-        console.log('スタンプデータ再読み込み完了');
         
         await initSettingsPage();
         console.log('設定画面再描画完了');
@@ -991,11 +832,11 @@ async function toggleStamp(stampId) {
         
     } catch (error) {
         console.error('スタンプ切り替えエラー:', error);
-        alert('エラーがおきました\n\nもういちどためしてね\n\nそれでもだめなら\nページをリロードしてください');
+        alert('エラーがおきました\n\nもういちどためしてね');
     }
 }
 
-// 基本設定の保存
+// 基本設定の保存（LocalStorage版）
 async function saveBasicSettings() {
     try {
         const childName = document.getElementById('childName').value.trim();
@@ -1023,25 +864,13 @@ async function saveBasicSettings() {
             return;
         }
         
-        const response = await fetch(`tables/settings/${currentSettings.id}`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                child_name: childName,
-                stamp_unit_price: stampPrice,
-                badge_threshold: badgeThreshold,
-                badge_bonus: badgeBonus
-            })
-        });
+        currentSettings.child_name = childName;
+        currentSettings.stamp_unit_price = stampPrice;
+        currentSettings.badge_threshold = badgeThreshold;
+        currentSettings.badge_bonus = badgeBonus;
         
-        if (!response.ok) {
-            throw new Error('ほぞんにしっぱいしました');
-        }
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(currentSettings));
         
-        // 設定を再読み込みして最新の状態を取得
-        await loadSettings();
-        
-        // 画面を更新して保存内容を反映
         document.getElementById('userName').textContent = `なまえ：${currentSettings.child_name}`;
         
         console.log('設定保存成功:', currentSettings);
@@ -1062,29 +891,11 @@ function confirmResetData() {
     }
 }
 
-// 全データリセット
+// 全データリセット（LocalStorage版）
 async function resetAllData() {
     try {
-        // スタンプデータをクリア
-        await fetch('tables/stamps', {
-            method: 'DELETE'
-        });
-        
-        // 週履歴をクリア
-        await fetch('tables/weekly_history', {
-            method: 'DELETE'
-        });
-        
-        // 達成記録をクリア
-        await fetch('tables/achievements', {
-            method: 'DELETE'
-        });
-        
-        // 累積給付額をリセット
-        await fetch(`tables/settings/${currentSettings.id}`, {
-            method: 'PATCH',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({ total_paid: 0 })
+        Object.values(STORAGE_KEYS).forEach(key => {
+            localStorage.removeItem(key);
         });
         
         alert('すべてのデータをけしたよ！');
@@ -1096,55 +907,45 @@ async function resetAllData() {
     }
 }
 
-// =====================================
-// バックアップ・復元機能
-// =====================================
-
-// 全データをエクスポート
+// バックアップのエクスポート
 async function exportData() {
     try {
-        // 全テーブルのデータを取得
-        const [settingsRes, stampsRes, historyRes, achievementsRes, customStampsRes] = await Promise.all([
-            fetch('tables/settings?limit=1000'),
-            fetch('tables/stamps?limit=10000'),
-            fetch('tables/weekly_history?limit=1000'),
-            fetch('tables/achievements?limit=1000'),
-            fetch('tables/custom_stamps?limit=1000')
-        ]);
-        
         const backupData = {
-            version: '2.1.0',
-            exportDate: new Date().toISOString(),
-            settings: (await settingsRes.json()).data,
-            stamps: (await stampsRes.json()).data,
-            weekly_history: (await historyRes.json()).data,
-            achievements: (await achievementsRes.json()).data,
-            custom_stamps: (await customStampsRes.json()).data
+            version: '3.3.0-localStorage',
+            exported_at: new Date().toISOString(),
+            settings: JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || 'null'),
+            stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.STAMPS) || '[]'),
+            weekly_history: JSON.parse(localStorage.getItem(STORAGE_KEYS.WEEKLY_HISTORY) || '[]'),
+            custom_stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOM_STAMPS) || '[]'),
+            achievements: JSON.parse(localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) || '[]')
         };
         
-        // JSONファイルとしてダウンロード
         const dataStr = JSON.stringify(backupData, null, 2);
-        const dataBlob = new Blob([dataStr], { type: 'application/json' });
+        const blob = new Blob([dataStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
         
-        const today = new Date();
-        const dateStr = today.toISOString().split('T')[0].replace(/-/g, '');
-        const fileName = `okozukai-backup-${dateStr}.json`;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `okozukai-backup-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
         
-        const url = URL.createObjectURL(dataBlob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = fileName;
-        link.click();
         URL.revokeObjectURL(url);
         
+        // 自動バックアップ情報を更新
+        const backupInfo = {
+            last_backup: Date.now(),
+            data: backupData
+        };
+        localStorage.setItem(STORAGE_KEYS.BACKUP, JSON.stringify(backupInfo));
+        
         // 初回バックアップの場合はガイドを表示
-        const hasShownGuide = localStorage.getItem('okozukai_backup_guide_shown');
+        const hasShownGuide = localStorage.getItem('backup_guide_shown');
         if (!hasShownGuide) {
             showBackupGuide();
-            localStorage.setItem('okozukai_backup_guide_shown', 'true');
-        } else {
-            alert('バックアップファイルをほぞんしたよ！');
+            localStorage.setItem('backup_guide_shown', 'true');
         }
+        
+        alert('バックアップファイルをほぞんしました！\n\niCloud DriveやGoogleドライブにほぞんしてね');
         
     } catch (error) {
         console.error('エクスポートエラー:', error);
@@ -1152,148 +953,70 @@ async function exportData() {
     }
 }
 
-// データをインポート
-async function importData(event) {
-    const file = event.target.files[0];
-    if (!file) return;
+// バックアップのインポート
+function importData() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
     
-    if (!confirm('ふくげんすると、いまのデータはすべてきえます。よろしいですか？')) {
-        event.target.value = '';
-        return;
-    }
-    
-    try {
-        const text = await file.text();
-        const backupData = JSON.parse(text);
+    input.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
         
-        // バージョンチェック
-        if (!backupData.version) {
-            throw new Error('Invalid backup file');
-        }
-        
-        // 既存データをクリア
-        await clearAllTables();
-        
-        // データを復元
-        if (backupData.settings && backupData.settings.length > 0) {
-            for (const item of backupData.settings) {
-                delete item.id;
-                await fetch('tables/settings', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
-        }
-        
-        if (backupData.stamps) {
-            for (const item of backupData.stamps) {
-                delete item.id;
-                await fetch('tables/stamps', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
-        }
-        
-        if (backupData.weekly_history) {
-            for (const item of backupData.weekly_history) {
-                delete item.id;
-                await fetch('tables/weekly_history', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
-        }
-        
-        if (backupData.achievements) {
-            for (const item of backupData.achievements) {
-                delete item.id;
-                await fetch('tables/achievements', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
-        }
-        
-        if (backupData.custom_stamps) {
-            for (const item of backupData.custom_stamps) {
-                delete item.id;
-                await fetch('tables/custom_stamps', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
-        }
-        
-        alert('データをふくげんしたよ！ページをさいどくします');
-        location.reload();
-        
-    } catch (error) {
-        console.error('インポートエラー:', error);
-        alert('ふくげんがうまくいかなかったよ。ファイルをかくにんしてね');
-    }
-    
-    event.target.value = '';
-}
-
-// 全テーブルをクリア
-async function clearAllTables() {
-    const tables = ['settings', 'stamps', 'weekly_history', 'achievements', 'custom_stamps'];
-    
-    for (const table of tables) {
         try {
-            const response = await fetch(`tables/${table}?limit=10000`);
-            const data = await response.json();
+            const text = await file.text();
+            const backupData = JSON.parse(text);
             
-            for (const item of data.data) {
-                await fetch(`tables/${table}/${item.id}`, {
-                    method: 'DELETE'
-                });
+            if (!confirm('いまのデータはぜんぶきえて、バックアップのデータにもどります。よろしいですか？')) {
+                return;
             }
+            
+            if (backupData.settings) {
+                localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(backupData.settings));
+            }
+            if (backupData.stamps) {
+                localStorage.setItem(STORAGE_KEYS.STAMPS, JSON.stringify(backupData.stamps));
+            }
+            if (backupData.weekly_history) {
+                localStorage.setItem(STORAGE_KEYS.WEEKLY_HISTORY, JSON.stringify(backupData.weekly_history));
+            }
+            if (backupData.custom_stamps) {
+                localStorage.setItem(STORAGE_KEYS.CUSTOM_STAMPS, JSON.stringify(backupData.custom_stamps));
+            }
+            if (backupData.achievements) {
+                localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(backupData.achievements));
+            }
+            
+            alert('データをふくげんしたよ！ページをさいどくします');
+            location.reload();
+            
         } catch (error) {
-            console.error(`テーブル ${table} のクリアエラー:`, error);
+            console.error('インポートエラー:', error);
+            alert('ファイルがよみこめなかったよ。ただしいバックアップファイルかかくにんしてね');
         }
-    }
+    };
+    
+    input.click();
 }
 
 // 自動バックアップのチェックと実行
 async function checkAndPerformAutoBackup() {
     try {
-        const today = formatDate(new Date());
-        const lastBackupDate = localStorage.getItem('okozukai_last_backup_date');
+        const backupInfo = JSON.parse(localStorage.getItem(STORAGE_KEYS.BACKUP) || 'null');
+        const now = Date.now();
+        const oneDayMs = 24 * 60 * 60 * 1000;
         
-        // 自動バックアップボタンの表示制御
-        const autoBackup = localStorage.getItem('okozukai_auto_backup');
-        const autoRestoreBtn = document.getElementById('autoRestoreBtn');
-        if (autoBackup && autoRestoreBtn) {
-            autoRestoreBtn.style.display = 'block';
-        }
-        
-        // 最終バックアップ日を表示
-        const lastBackupDateElem = document.getElementById('lastBackupDate');
-        if (lastBackupDateElem) {
-            if (lastBackupDate) {
-                const date = new Date(lastBackupDate);
-                lastBackupDateElem.textContent = `${date.getFullYear()}ねん${date.getMonth() + 1}がつ${date.getDate()}にち`;
-            } else {
-                lastBackupDateElem.textContent = 'まだありません';
-            }
-        }
-        
-        // 今日まだバックアップしていなければ実行
-        if (lastBackupDate !== today) {
+        if (!backupInfo || (now - backupInfo.last_backup > oneDayMs)) {
             await performAutoBackup();
-            localStorage.setItem('okozukai_last_backup_date', today);
-            
-            // 表示を更新
-            if (lastBackupDateElem) {
-                const date = new Date();
-                lastBackupDateElem.textContent = `${date.getFullYear()}ねん${date.getMonth() + 1}がつ${date.getDate()}にち`;
+        }
+        
+        // 最終バックアップ日時を表示
+        if (backupInfo && backupInfo.last_backup) {
+            const lastBackupDate = new Date(backupInfo.last_backup);
+            const dateStr = `${lastBackupDate.getFullYear()}ねん${lastBackupDate.getMonth() + 1}がつ${lastBackupDate.getDate()}にち`;
+            const elem = document.getElementById('lastBackupDate');
+            if (elem) {
+                elem.textContent = dateStr;
             }
         }
     } catch (error) {
@@ -1301,37 +1024,25 @@ async function checkAndPerformAutoBackup() {
     }
 }
 
-// 自動バックアップを実行
+// 自動バックアップの実行
 async function performAutoBackup() {
     try {
-        // 全テーブルのデータを取得
-        const [settingsRes, stampsRes, historyRes, achievementsRes, customStampsRes] = await Promise.all([
-            fetch('tables/settings?limit=1000'),
-            fetch('tables/stamps?limit=10000'),
-            fetch('tables/weekly_history?limit=1000'),
-            fetch('tables/achievements?limit=1000'),
-            fetch('tables/custom_stamps?limit=1000')
-        ]);
-        
         const backupData = {
-            version: '2.1.0',
-            exportDate: new Date().toISOString(),
-            settings: (await settingsRes.json()).data,
-            stamps: (await stampsRes.json()).data,
-            weekly_history: (await historyRes.json()).data,
-            achievements: (await achievementsRes.json()).data,
-            custom_stamps: (await customStampsRes.json()).data
+            version: '3.3.0-localStorage',
+            backed_up_at: new Date().toISOString(),
+            settings: JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || 'null'),
+            stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.STAMPS) || '[]'),
+            weekly_history: JSON.parse(localStorage.getItem(STORAGE_KEYS.WEEKLY_HISTORY) || '[]'),
+            custom_stamps: JSON.parse(localStorage.getItem(STORAGE_KEYS.CUSTOM_STAMPS) || '[]'),
+            achievements: JSON.parse(localStorage.getItem(STORAGE_KEYS.ACHIEVEMENTS) || '[]')
         };
         
-        // LocalStorageに保存
-        localStorage.setItem('okozukai_auto_backup', JSON.stringify(backupData));
+        const backupInfo = {
+            last_backup: Date.now(),
+            data: backupData
+        };
         
-        // 自動復元ボタンを表示
-        const autoRestoreBtn = document.getElementById('autoRestoreBtn');
-        if (autoRestoreBtn) {
-            autoRestoreBtn.style.display = 'block';
-        }
-        
+        localStorage.setItem(STORAGE_KEYS.BACKUP, JSON.stringify(backupInfo));
         console.log('自動バックアップ完了:', new Date().toISOString());
     } catch (error) {
         console.error('自動バックアップエラー:', error);
@@ -1340,77 +1051,34 @@ async function performAutoBackup() {
 
 // 自動バックアップから復元
 async function restoreFromAutoBackup() {
-    const autoBackup = localStorage.getItem('okozukai_auto_backup');
-    
-    if (!autoBackup) {
-        alert('じどうバックアップがみつかりません');
-        return;
-    }
-    
-    if (!confirm('じどうバックアップからふくげんします。いまのデータはきえますが、よろしいですか？')) {
-        return;
-    }
-    
     try {
-        const backupData = JSON.parse(autoBackup);
+        const backupInfo = JSON.parse(localStorage.getItem(STORAGE_KEYS.BACKUP) || 'null');
         
-        // 既存データをクリア
-        await clearAllTables();
-        
-        // データを復元（exportDataと同じロジック）
-        if (backupData.settings && backupData.settings.length > 0) {
-            for (const item of backupData.settings) {
-                delete item.id;
-                await fetch('tables/settings', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
+        if (!backupInfo || !backupInfo.data) {
+            alert('じどうバックアップがみつかりません');
+            return;
         }
         
+        if (!confirm('いまのデータはぜんぶきえて、じどうバックアップのデータにもどります。よろしいですか？')) {
+            return;
+        }
+        
+        const backupData = backupInfo.data;
+        
+        if (backupData.settings) {
+            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(backupData.settings));
+        }
         if (backupData.stamps) {
-            for (const item of backupData.stamps) {
-                delete item.id;
-                await fetch('tables/stamps', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
+            localStorage.setItem(STORAGE_KEYS.STAMPS, JSON.stringify(backupData.stamps));
         }
-        
         if (backupData.weekly_history) {
-            for (const item of backupData.weekly_history) {
-                delete item.id;
-                await fetch('tables/weekly_history', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
+            localStorage.setItem(STORAGE_KEYS.WEEKLY_HISTORY, JSON.stringify(backupData.weekly_history));
         }
-        
-        if (backupData.achievements) {
-            for (const item of backupData.achievements) {
-                delete item.id;
-                await fetch('tables/achievements', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
-        }
-        
         if (backupData.custom_stamps) {
-            for (const item of backupData.custom_stamps) {
-                delete item.id;
-                await fetch('tables/custom_stamps', {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(item)
-                });
-            }
+            localStorage.setItem(STORAGE_KEYS.CUSTOM_STAMPS, JSON.stringify(backupData.custom_stamps));
+        }
+        if (backupData.achievements) {
+            localStorage.setItem(STORAGE_KEYS.ACHIEVEMENTS, JSON.stringify(backupData.achievements));
         }
         
         alert('データをふくげんしたよ！ページをさいどくします');
@@ -1433,12 +1101,3 @@ function closeBackupGuide() {
     const modal = document.getElementById('backupGuideModal');
     modal.classList.remove('active');
 }
-
-// 設定ページ初期化時にバックアップ情報を更新
-const originalInitSettingsPage = initSettingsPage;
-initSettingsPage = async function() {
-    await originalInitSettingsPage();
-    await checkAndPerformAutoBackup();
-};
-
-
