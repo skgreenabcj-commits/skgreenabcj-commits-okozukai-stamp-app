@@ -515,11 +515,17 @@ async function saveWeeklyHistory(totalStamps, allowancePaid, carryover) {
         
         localStorage.setItem(STORAGE_KEYS.WEEKLY_HISTORY, JSON.stringify(allHistory));
         
-        // 累積給付額を更新
-        if (allowancePaid > 0) {
-            currentSettings.total_paid = (currentSettings.total_paid || 0) + allowancePaid;
-            localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(currentSettings));
-        }
+        // 累積給付額を週履歴から再計算（重複加算を防ぐ）
+        const totalPaid = allHistory.reduce((sum, h) => sum + (h.allowance_paid || 0), 0);
+        currentSettings.total_paid = totalPaid;
+        localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(currentSettings));
+        
+        console.log('週履歴保存完了:', {
+            週: weekLabel,
+            スタンプ: totalStamps,
+            お小遣い: allowancePaid,
+            累積給付額: totalPaid
+        });
     } catch (error) {
         console.error('週履歴保存エラー:', error);
     }
